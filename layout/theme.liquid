@@ -28,6 +28,10 @@
 
     {% render 'meta-tags' %}
 
+    {%- comment -%} RTL Support {%- endcomment -%}
+    {% render 'rtl-detection' %}
+    {{ 'rtl.css' | asset_url | stylesheet_tag }}
+
     <script src="{{ 'constants.js' | asset_url }}" defer="defer"></script>
     <script src="{{ 'pubsub.js' | asset_url }}" defer="defer"></script>
     <script src="{{ 'global.js' | asset_url }}" defer="defer"></script>
@@ -372,5 +376,8 @@
     {%- if settings.cart_type == 'drawer' -%}
       <script src="{{ 'cart-drawer.js' | asset_url }}" defer="defer"></script>
     {%- endif -%}
+
+    {%- comment -%} RTL Support JavaScript {%- endcomment -%}
+    <script src="{{ 'rtl-support.js' | asset_url }}" defer="defer"></script>
   </body>
 </html>

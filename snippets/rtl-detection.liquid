@@ -1,0 +1,30 @@
+{% comment %}
+  RTL Detection Snippet - Optimized
+  Detects RTL languages and applies appropriate attributes
+{% endcomment %}
+
+{%- assign rtl_languages = 'ar,he,fa,ur,ku,dv,ps,sd,yi,arc,bcc,bqi,ckb,glk,lrc,mzn,pnb,prs,luz,ks' | split: ',' -%}
+{%- assign current_language = request.locale.iso_code | split: '-' | first -%}
+{%- assign is_rtl = false -%}
+
+{%- for lang in rtl_languages -%}
+  {%- if current_language == lang -%}
+    {%- assign is_rtl = true -%}
+    {%- break -%}
+  {%- endif -%}
+{%- endfor -%}
+
+<script>
+  // Set attributes immediately
+  document.documentElement.setAttribute('dir', '{{ is_rtl | default: 'ltr' | replace: 'true', 'rtl' }}');
+  document.documentElement.setAttribute('lang', '{{ request.locale.iso_code }}');
+  document.documentElement.classList.add('lang-{{ current_language }}');
+  document.body.classList.add('{{ is_rtl | default: 'ltr' | replace: 'true', 'rtl' }}');
+
+  // Store RTL configuration globally
+  window.RTL_CONFIG = {
+    isRTL: {{ is_rtl | json }},
+    language: '{{ current_language }}',
+    locale: '{{ request.locale.iso_code }}'
+  };
+</script>
