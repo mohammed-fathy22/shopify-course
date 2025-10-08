@@ -1,0 +1,239 @@
+name: Shopify Theme CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
+
+env:
+  NODE_VERSION: '18'
+  SHOPIFY_CLI_VERSION: '3.50.0'
+
+jobs:
+  lint-and-validate:
+    name: Lint and Validate Theme
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Shopify CLI
+        run: |
+          npm install -g @shopify/cli@${{ env.SHOPIFY_CLI_VERSION }}
+          npm install -g @shopify/theme@${{ env.SHOPIFY_CLI_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+          fi
+
+      - name: Theme Check
+        run: |
+          shopify theme check
+        env:
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+
+      - name: Validate Liquid syntax
+        run: |
+          find . -name "*.liquid" -exec echo "Checking {}" \; -exec shopify theme check {} \;
+
+      - name: Check for broken links
+        run: |
+          if command -v linkchecker &> /dev/null; then
+            linkchecker --check-extern --no-robots --ignore-url="^mailto:" --ignore-url="^tel:" --ignore-url="^#" .
+          else
+            echo "Linkchecker not installed, skipping link check"
+          fi
+
+      - name: Validate JSON files
+        run: |
+          find . -name "*.json" -exec echo "Validating {}" \; -exec python3 -m json.tool {} > /dev/null \;
+
+      - name: Check file sizes
+        run: |
+          echo "Checking for large files..."
+          find . -type f -size +1M -not -path "./.git/*" -not -path "./node_modules/*" | head -10
+
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: lint-and-validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+          fi
+
+      - name: Build assets
+        run: |
+          if [ -f package.json ] && grep -q '"build"' package.json; then
+            npm run build
+          else
+            echo "No build script found, skipping build step"
+          fi
+
+      - name: Run tests
+        run: |
+          if [ -f package.json ] && grep -q '"test"' package.json; then
+            npm test
+          else
+            echo "No test script found, skipping tests"
+          fi
+
+      - name: Generate theme report
+        run: |
+          echo "# Theme Analysis Report" > theme-report.md
+          echo "Generated on: $(date)" >> theme-report.md
+          echo "" >> theme-report.md
+          echo "## File Counts" >> theme-report.md
+          echo "- Liquid files: $(find . -name "*.liquid" | wc -l)" >> theme-report.md
+          echo "- CSS files: $(find . -name "*.css" | wc -l)" >> theme-report.md
+          echo "- JS files: $(find . -name "*.js" | wc -l)" >> theme-report.md
+          echo "- JSON files: $(find . -name "*.json" | wc -l)" >> theme-report.md
+          echo "- Image files: $(find . -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" | wc -l)" >> theme-report.md
+
+      - name: Upload theme report
+        uses: actions/upload-artifact@v4
+        with:
+          name: theme-report
+          path: theme-report.md
+
+  deploy-development:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: [lint-and-validate, build-and-test]
+    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'development')
+    environment: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Shopify CLI
+        run: npm install -g @shopify/cli@${{ env.SHOPIFY_CLI_VERSION }}
+
+      - name: Deploy to development store
+        run: |
+          shopify theme push --store=${{ secrets.SHOPIFY_DEV_STORE }} --theme=${{ secrets.SHOPIFY_DEV_THEME_ID }} --allow-live
+        env:
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_CLI_THEME_TOKEN }}
+
+      - name: Generate preview URL
+        run: |
+          echo "Theme deployed to development store"
+          echo "Preview URL: https://${{ secrets.SHOPIFY_DEV_STORE }}.myshopify.com/?preview_theme_id=${{ secrets.SHOPIFY_DEV_THEME_ID }}"
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [lint-and-validate, build-and-test]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Shopify CLI
+        run: npm install -g @shopify/cli@${{ env.SHOPIFY_CLI_VERSION }}
+
+      - name: Deploy to staging store
+        run: |
+          shopify theme push --store=${{ secrets.SHOPIFY_STAGING_STORE }} --theme=${{ secrets.SHOPIFY_STAGING_THEME_ID }} --allow-live
+        env:
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_STAGING_THEME_TOKEN }}
+
+      - name: Generate preview URL
+        run: |
+          echo "Theme deployed to staging store"
+          echo "Preview URL: https://${{ secrets.SHOPIFY_STAGING_STORE }}.myshopify.com/?preview_theme_id=${{ secrets.SHOPIFY_STAGING_THEME_ID }}"
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [lint-and-validate, build-and-test]
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Shopify CLI
+        run: npm install -g @shopify/cli@${{ env.SHOPIFY_CLI_VERSION }}
+
+      - name: Create backup of current theme
+        run: |
+          shopify theme pull --store=${{ secrets.SHOPIFY_PROD_STORE }} --theme=${{ secrets.SHOPIFY_PROD_THEME_ID }} --path=backup-$(date +%Y%m%d-%H%M%S)
+        env:
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_PROD_THEME_TOKEN }}
+
+      - name: Deploy to production store
+        run: |
+          shopify theme push --store=${{ secrets.SHOPIFY_PROD_STORE }} --theme=${{ secrets.SHOPIFY_PROD_THEME_ID }} --allow-live
+        env:
+          SHOPIFY_CLI_THEME_TOKEN: ${{ secrets.SHOPIFY_PROD_THEME_TOKEN }}
+
+      - name: Generate production URL
+        run: |
+          echo "Theme deployed to production store"
+          echo "Live URL: https://${{ secrets.SHOPIFY_PROD_STORE }}.myshopify.com"
+
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-development, deploy-staging, deploy-production]
+    if: always()
+    steps:
+      - name: Notify success
+        if: ${{ needs.deploy-development.result == 'success' || needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success' }}
+        run: |
+          echo "✅ Theme deployment completed successfully!"
+          echo "Check the deployment logs for preview URLs."
+
+      - name: Notify failure
+        if: ${{ needs.deploy-development.result == 'failure' || needs.deploy-staging.result == 'failure' || needs.deploy-production.result == 'failure' }}
+        run: |
+          echo "❌ Theme deployment failed!"
+          echo "Check the logs for error details."

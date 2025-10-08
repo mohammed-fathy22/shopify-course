@@ -1,0 +1,35 @@
+{
+  "general": {
+    "meta": {
+      "title": "متجرنا",
+      "description": "متجرنا الإلكتروني"
+    },
+    "continue_shopping": "متابعة التسوق",
+    "404": {
+      "title": "الصفحة غير موجودة",
+      "subtext": "عذراً، الصفحة التي تبحث عنها غير موجودة."
+    }
+  },
+  "sections": {
+    "header": {
+      "announcement": "إعلان",
+      "menu": "القائمة"
+    },
+    "footer": {
+      "newsletter": {
+        "heading": "اشترك في نشرتنا الإخبارية",
+        "email_placeholder": "عنوان بريدك الإلكتروني",
+        "button_label": "اشتراك"
+      }
+    }
+  },
+  "templates": {
+    "product": {
+      "title": "المنتج",
+      "price": "السعر",
+      "add_to_cart": "أضف إلى السلة",
+      "sold_out": "نفد المخزون",
+      "unavailable": "غير متوفر"
+    }
+  }
+}

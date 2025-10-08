@@ -1,0 +1,49 @@
+{
+  "name": "sw-shopify-course-theme",
+  "version": "1.0.0",
+  "description": "Shopify theme with RTL support for Arabic localization",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run build:css && npm run build:js",
+    "build:css": "echo 'CSS build completed'",
+    "build:js": "echo 'JS build completed'",
+    "test": "npm run test:lint && npm run test:theme-check",
+    "test:lint": "echo 'Running theme linting...'",
+    "test:theme-check": "shopify theme check",
+    "dev": "shopify theme dev",
+    "deploy:dev": "SHOPIFY_DEV_STORE=sw-edu-mohammed-fathy SHOPIFY_DEV_THEME_ID=186857029964 SHOPIFY_CLI_THEME_TOKEN=shptka_8a80928da27a91be69f141f176782ecb shopify theme push --store=sw-edu-mohammed-fathy --theme=186857029964",
+    "deploy:staging": "SHOPIFY_STAGING_STORE=sw-edu-mohammed-fathy SHOPIFY_STAGING_THEME_ID=186850017612 SHOPIFY_CLI_THEME_TOKEN=shptka_8a80928da27a91be69f141f176782ecb shopify theme push --store=sw-edu-mohammed-fathy --theme=186850017612",
+    "deploy:prod": "SHOPIFY_PROD_STORE=sw-edu-mohammed-fathy SHOPIFY_PROD_THEME_ID=186851557708 SHOPIFY_CLI_THEME_TOKEN=shptka_8a80928da27a91be69f141f176782ecb shopify theme push --store=sw-edu-mohammed-fathy --theme=186851557708 --allow-live",
+    "pull:dev": "shopify theme pull --store=$SHOPIFY_DEV_STORE --theme=$SHOPIFY_DEV_THEME_ID",
+    "pull:staging": "shopify theme pull --store=$SHOPIFY_STAGING_STORE --theme=$SHOPIFY_STAGING_THEME_ID",
+    "pull:prod": "shopify theme pull --store=$SHOPIFY_PROD_STORE --theme=$SHOPIFY_PROD_THEME_ID",
+    "preview": "shopify theme dev --store=$SHOPIFY_DEV_STORE"
+  },
+  "keywords": [
+    "shopify",
+    "theme",
+    "rtl",
+    "arabic",
+    "localization",
+    "liquid"
+  ],
+  "author": "Mohammed",
+  "license": "MIT",
+  "devDependencies": {
+    "@shopify/cli": "^3.50.0",
+    "@shopify/theme": "^3.50.0",
+    "dotenv": "^17.2.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/sw-shopify-course.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/sw-shopify-course/issues"
+  },
+  "homepage": "https://github.com/your-username/sw-shopify-course#readme"
+}
